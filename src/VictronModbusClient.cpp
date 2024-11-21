@@ -19,6 +19,8 @@ VictronModbusClient::VictronModbusClient(const std::string &host, int port) : ho
     if (mb->err || mb->is_connected()) {
         // TODO handle error. we need a way to inform customer
     }
+
+    windowEndTaskHandle = nullptr;
 }
 
 // TODO check summer time

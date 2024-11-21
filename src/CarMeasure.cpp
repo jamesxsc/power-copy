@@ -26,11 +26,11 @@ int CarMeasure::measureRMSAmperes() {
         samples.push_back(adc1_get_raw(ADC1_CHANNEL_0));
     }
 
-    int mean = std::reduce(samples.begin(), samples.end(), 0) / numSamples;
+    int dc = std::reduce(samples.begin(), samples.end(), 0) / numSamples;
 
     int rmsCountsSquared = std::transform_reduce(
             samples.begin(), samples.end(), 0, std::plus<>(),
-            [mean](int value) { return (value - mean) * (value - mean); }
+            [dc](int value) { return (value - dc) * (value - dc); }
     ) / numSamples;
 
     // 1000mV * voltCal V for the range of 4096 ADC counts.
