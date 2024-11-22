@@ -3,13 +3,17 @@
 #include "freertos/FreeRTOS.h"
 #include "CarMeasure.h"
 #include "VictronModbusClient.h"
+#include "WiFiStation.h"
 
 constexpr int threshold = 500; // 500mA
 
 CarMeasure carMeasure;
-VictronModbusClient modbusClient("10.0.0.116", 502);
+//VictronModbusClient modbusClient("10.0.0.116", 502);
 
 extern "C" void app_main() {
+
+    carMeasure.init();
+    wifiStation.init();
 
     // turn on gpio2 led
     gpio_set_direction(GPIO_NUM_2, GPIO_MODE_OUTPUT);
@@ -24,7 +28,7 @@ extern "C" void app_main() {
             ESP_LOGI("main", "Measurement: %d", measurement);
 
             if (measurement > threshold) {
-                // todo signal to modbusclient to initiate 1/2 hour of on time
+//                modbusClient.handleCarSignal();
             }
 
             // TODO what is provider's mininum window size such that we capture all half hour intervals

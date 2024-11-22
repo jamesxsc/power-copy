@@ -9,12 +9,13 @@ class CarMeasure {
 public:
 
     CarMeasure();
+    void init();
 
     int measureRMSAmperes();
 
 private:
-    int res = 23;
-    int voltCal = 3300;
+    int res = 24;
+    int voltCal = 2840; // Obtained from attenuation at 12dB giving 3.55 * 800mV
     int coilRatio = 100000 / 50; // 100A - 50mA
 
 };

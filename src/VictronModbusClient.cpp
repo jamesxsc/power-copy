@@ -5,6 +5,7 @@
 #include "VictronModbusClient.h"
 #include <chrono>
 #include <ctime>
+#include "freertos/task.h"
 
 struct task_params_t {
     VictronModbusClient *instance;
@@ -46,10 +47,11 @@ void VictronModbusClient::handleCarSignal() {
         windowEndMins = 0;
     }
 
-    TaskStatus_t status;
-    vTaskGetInfo(*windowEndTaskHandle, &status, pdFALSE, eInvalid);
+//    TaskStatus_t status;
+// todo not allowed!
+//    vTaskGetInfo(*windowEndTaskHandle, &status, pdFALSE, eInvalid);
     // This means that the task has finished, so we are in the next time interval and want to start a new task for the end
-    if (status.eCurrentState == eDeleted || status.eCurrentState == eInvalid) {
+//    if (status.eCurrentState == eDeleted || status.eCurrentState == eInvalid) {
         int millisTillTask = 60000 * ((windowEndHour - currentHour) * 60 + windowEndMins - currentMins);
         task_params_t params = {
                 .instance = this,
@@ -60,7 +62,7 @@ void VictronModbusClient::handleCarSignal() {
             vTaskDelay(params->millis);
             params->instance->modbusNormalOperation();
         }, "window_end_task", 2048, (void *) &params, 5, windowEndTaskHandle);
-    }
+//    }
 
 }
 
@@ -71,9 +73,9 @@ VictronModbusClient::~VictronModbusClient() {
 }
 
 void VictronModbusClient::modbusNormalOperation() {
-    mb->modbus_write_register(2900, 10);
+//    mb->modbus_write_register(2900, 10);
 }
 
 void VictronModbusClient::modbusChargeToFull() {
-    mb->modbus_write_register(2900, 9);
+//    mb->modbus_write_register(2900, 9);
 }
