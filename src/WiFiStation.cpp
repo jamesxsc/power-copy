@@ -41,7 +41,11 @@ void WiFiStation::init() {
     err = nvs_flash_init();
 
     if (err == ESP_ERR_NVS_NO_FREE_PAGES || err == ESP_ERR_NVS_NEW_VERSION_FOUND) {
-        nvs_flash_erase();
+        err = nvs_flash_erase();
+        if (err != ESP_OK) {
+            // TODO handle error
+            ESP_LOGE("WiFiStation", "Error in nvs_flash_erase");
+        }
         err = nvs_flash_init();
     }
 
@@ -129,7 +133,7 @@ void WiFiStation::init() {
         ESP_LOGE("WiFiStation", "Error in esp_wifi_start");
     }
 
-    EventBits_t bits = xEventGroupWaitBits(wifi_event_group, BIT0 | BIT1, pdFALSE, pdTRUE, portMAX_DELAY);
+    EventBits_t bits = xEventGroupWaitBits(wifi_event_group, BIT0 | BIT1, pdFALSE, pdFALSE, portMAX_DELAY);
 
     if (bits & BIT0) {
         ESP_LOGI("WiFiStation", "WiFi connected to AP");
