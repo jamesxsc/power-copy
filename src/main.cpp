@@ -19,6 +19,7 @@ extern "C" void app_main() {
 
     wifiStation.init(); // this (nvs) has to be done before ADC init
     carMeasure.init();
+    modbusClient.init();
 
     ErrorHandler::ok();
 

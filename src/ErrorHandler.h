@@ -15,8 +15,5 @@ public:
 
     static void error();
 
-private:
-    static gpio_num_t ledPin_;
-
 };
 

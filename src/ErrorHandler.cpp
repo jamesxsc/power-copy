@@ -5,6 +5,8 @@
 #include "ErrorHandler.h"
 #include "freertos/FreeRTOS.h"
 
+static gpio_num_t ledPin_;
+
 void ErrorHandler::init(gpio_num_t ledPin) {
     ledPin_ = ledPin;
     gpio_set_direction(ledPin_, GPIO_MODE_OUTPUT);

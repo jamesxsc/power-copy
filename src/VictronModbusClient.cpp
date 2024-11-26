@@ -15,16 +15,15 @@ struct task_params_t {
 };
 
 VictronModbusClient::VictronModbusClient(const std::string &host, int port) : host_(host), port_(port) {
-    mb_ = nullptr;
+    mb_ = new modbus(host_, port_);
     windowEndTaskHandle_ = nullptr;
 }
 
 void VictronModbusClient::init() {
-    mb_ = new modbus(host_, port_);
     mb_->modbus_set_slave_id(100);
     mb_->modbus_connect();
 
-    if (mb_->err || mb_->is_connected()) {
+    if (mb_->err || !mb_->is_connected()) {
         ESP_LOGE("VictronModbusClient", "Modbus connection failed");
         ErrorHandler::error();
         return;
@@ -72,12 +71,6 @@ void VictronModbusClient::handleCarSignal() {
 
 }
 
-VictronModbusClient::~VictronModbusClient() {
-    mb_->modbus_close();
-    delete mb_;
-    delete windowEndTaskHandle_;
-}
-
 void VictronModbusClient::modbusNormalOperation() {
     mb_->modbus_write_register(2900, 10);
 
@@ -96,4 +89,10 @@ void VictronModbusClient::modbusChargeToFull() {
         ErrorHandler::error();
         return;
     }
+}
+
+VictronModbusClient::~VictronModbusClient() {
+    mb_->modbus_close();
+    delete mb_;
+    delete windowEndTaskHandle_;
 }
