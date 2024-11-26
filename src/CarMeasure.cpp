@@ -11,13 +11,10 @@
 #include <cstring>
 #include "CarMeasure.h"
 #include "esp_adc/adc_continuous.h"
-
-CarMeasure::CarMeasure() {
-}
+#include "ErrorHandler.h"
 
 static TaskHandle_t s_task_handle = nullptr;
 
-// temp test
 static bool IRAM_ATTR
 s_conv_done_cb(adc_continuous_handle_t handle, const adc_continuous_evt_data_t *edata, void *user_data) {
     BaseType_t mustYield = pdFALSE;
@@ -35,10 +32,11 @@ void CarMeasure::init() {
             // below is num of byes ie num of samples * 2
             .conv_frame_size = 512 // todo consider macro for numsize so we can use in array init
     };
-    esp_err_t err = adc_continuous_new_handle(&adc_config, &adc_handle);
+    esp_err_t err = adc_continuous_new_handle(&adc_config, &adc_handle_);
     if (err != ESP_OK) {
         ESP_LOGE("CarMeasure", "Error in adc_continuous_new_handle");
-        // todo handle error
+        ErrorHandler::error();
+        return;
     }
 
     adc_continuous_config_t adc_dig_config = {
@@ -58,33 +56,38 @@ void CarMeasure::init() {
     };
     adc_dig_config.adc_pattern = adc_pattern;
 
-    err = adc_continuous_config(adc_handle, &adc_dig_config);
+    err = adc_continuous_config(adc_handle_, &adc_dig_config);
     if (err != ESP_OK) {
         ESP_LOGE("CarMeasure", "Error in adc_continuous_config");
-        // todo handle error
+        ErrorHandler::error();
+        return;
     }
 
     adc_continuous_evt_cbs_t adc_cbs = {
             .on_conv_done = s_conv_done_cb
     };
-    err = adc_continuous_register_event_callbacks(adc_handle, &adc_cbs, nullptr);
+
+    err = adc_continuous_register_event_callbacks(adc_handle_, &adc_cbs, nullptr);
     if (err != ESP_OK) {
         ESP_LOGE("CarMeasure", "Error in adc_continuous_register_event_callbacks");
+        ErrorHandler::error();
         return;
-        // todo handle error
     }
 
-    err = adc_continuous_start(adc_handle);
+    err = adc_continuous_start(adc_handle_);
     if (err != ESP_OK) {
         ESP_LOGE("CarMeasure", "Error in adc_continuous_start");
-        // todo handle error
+        ErrorHandler::error();
+        return;
     }
 
 }
 
+// There is still some noise in the readings
+// But it is good enough for our threshold check
+// In the future, amplification at the input *could* improve this
 int CarMeasure::measureRMSAmperes() {
-
-    ESP_LOGI("CarMeasure", "Measuring RMS Amperes");
+    ESP_LOGV("CarMeasure", "Measuring RMS Amperes");
 
     s_task_handle = xTaskGetCurrentTaskHandle();
 
@@ -96,19 +99,16 @@ int CarMeasure::measureRMSAmperes() {
     std::vector<int> samples;
     samples.reserve(numSamples);
 
-    esp_err_t err = adc_continuous_read(adc_handle, result, numSamples * 2, &ret_num, 0);
+    esp_err_t err = adc_continuous_read(adc_handle_, result, numSamples * 2, &ret_num, 0);
     if (err != ESP_OK) {
         ESP_LOGE("CarMeasure", "Error in adc_continuous_read");
-        // print error type
-        ESP_LOGE("CarMeasure", "Error type: %d", err);
+        ErrorHandler::error();
         return 0;
-        // todo handle error
     }
 
     // note there are two bytes per sample
     // this should be 'safe' ie worst case we get less samples, but may need to update for later calcs
     for (int i = 0; i < ret_num; i += SOC_ADC_DIGI_RESULT_BYTES) {
-        ESP_LOGI("CarMeasure", "Sample %d: %d", i, ((adc_digi_output_data_t *) &result[i])->type1.data);
         samples.push_back(((adc_digi_output_data_t *) &result[i])->type1.data);
     }
 
@@ -130,14 +130,22 @@ int CarMeasure::measureRMSAmperes() {
     // 1000mV * voltCal V for the range of 4096 ADC counts.
     // Then use I  = V/R and the coil ratio
 
-    double milliVolts = ((double) voltCal / 4096 * sqrt(rmsCountsSquared));
+    double milliVolts = ((double) voltCal_ / 4096 * sqrt(rmsCountsSquared));
 
     ESP_LOGI("CarMeasure", "MilliVolts: %f", milliVolts);
 
-    double current = milliVolts / res;
+    double current = milliVolts / res_;
 
     ESP_LOGI("CarMeasure", "Current: %f", current);
 
-    return (int) (coilRatio * (double) milliVolts / res);
+    int mainsCurrent = (int) (coilRatio_ * (double) milliVolts / res_);
+
+    // Sanity check
+    if (mainsCurrent == 0 || mainsCurrent > 100000) {
+        ErrorHandler::error();
+        return 0;
+    }
+
+    return mainsCurrent;
     // todo tidy up types and rounding, but try to avoid float context?
 }

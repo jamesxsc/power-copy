@@ -17,7 +17,7 @@ public:
 private:
     static void eventHandler(void *arg, esp_event_base_t event_base, int32_t event_id, void *event_data);
 
-    std::string ssid;
-    std::string password;
+    std::string ssid_;
+    std::string password_;
 
 };

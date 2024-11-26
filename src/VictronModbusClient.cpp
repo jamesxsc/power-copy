@@ -5,28 +5,34 @@
 #include "VictronModbusClient.h"
 #include <chrono>
 #include <ctime>
+#include <esp_log.h>
 #include "freertos/task.h"
+#include "ErrorHandler.h"
 
 struct task_params_t {
     VictronModbusClient *instance;
     int millis;
 };
 
-VictronModbusClient::VictronModbusClient(const std::string &host, int port) : host(host), port(port) {
-    mb = new modbus(host, port);
-    mb->modbus_set_slave_id(100);
-    mb->modbus_connect();
+VictronModbusClient::VictronModbusClient(const std::string &host, int port) : host_(host), port_(port) {
+    mb_ = nullptr;
+    windowEndTaskHandle_ = nullptr;
+}
 
-    if (mb->err || mb->is_connected()) {
-        // TODO handle error. we need a way to inform customer
+void VictronModbusClient::init() {
+    mb_ = new modbus(host_, port_);
+    mb_->modbus_set_slave_id(100);
+    mb_->modbus_connect();
+
+    if (mb_->err || mb_->is_connected()) {
+        ESP_LOGE("VictronModbusClient", "Modbus connection failed");
+        ErrorHandler::error();
+        return;
     }
 
-    windowEndTaskHandle = nullptr;
 }
 
 // TODO check summer time
-// TODO check VRM logging capability and add our own if insufficient
-// cost saving to customer needs to be obtainable
 void VictronModbusClient::handleCarSignal() {
     modbusChargeToFull();
 
@@ -52,30 +58,42 @@ void VictronModbusClient::handleCarSignal() {
 //    vTaskGetInfo(*windowEndTaskHandle, &status, pdFALSE, eInvalid);
     // This means that the task has finished, so we are in the next time interval and want to start a new task for the end
 //    if (status.eCurrentState == eDeleted || status.eCurrentState == eInvalid) {
-        int millisTillTask = 60000 * ((windowEndHour - currentHour) * 60 + windowEndMins - currentMins);
-        task_params_t params = {
-                .instance = this,
-                .millis = millisTillTask
-        };
-        xTaskCreate([](void *args) {
-            auto *params = (task_params_t *) args;
-            vTaskDelay(params->millis);
-            params->instance->modbusNormalOperation();
-        }, "window_end_task", 2048, (void *) &params, 5, windowEndTaskHandle);
+    int millisTillTask = 60000 * ((windowEndHour - currentHour) * 60 + windowEndMins - currentMins);
+    task_params_t params = {
+            .instance = this,
+            .millis = millisTillTask
+    };
+    xTaskCreate([](void *args) {
+        auto *params = (task_params_t *) args;
+        vTaskDelay(params->millis);
+        params->instance->modbusNormalOperation();
+    }, "window_end_task", 2048, (void *) &params, 5, windowEndTaskHandle_);
 //    }
 
 }
 
 VictronModbusClient::~VictronModbusClient() {
-    mb->modbus_close();
-    delete mb;
-    delete windowEndTaskHandle;
+    mb_->modbus_close();
+    delete mb_;
+    delete windowEndTaskHandle_;
 }
 
 void VictronModbusClient::modbusNormalOperation() {
-//    mb->modbus_write_register(2900, 10);
+    mb_->modbus_write_register(2900, 10);
+
+    if (mb_->err) {
+        ESP_LOGE("VictronModbusClient", "Error writing to register in modbusNormalOperation");
+        ErrorHandler::error();
+        return;
+    }
 }
 
 void VictronModbusClient::modbusChargeToFull() {
-//    mb->modbus_write_register(2900, 9);
+    mb_->modbus_write_register(2900, 9);
+
+    if (mb_->err) {
+        ESP_LOGE("VictronModbusClient", "Error writing to register in modbusChargeToFull");
+        ErrorHandler::error();
+        return;
+    }
 }
