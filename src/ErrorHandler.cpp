@@ -2,6 +2,7 @@
 // Created by James Conway on 26/11/2024.
 //
 
+#include <esp_log.h>
 #include "ErrorHandler.h"
 #include "freertos/FreeRTOS.h"
 
@@ -18,9 +19,13 @@ void ErrorHandler::ok() {
 }
 
 void ErrorHandler::error() {
+    ESP_LOGI("ErrorHandler", "Error state entered");
+
     // cancel main task
     TaskHandle_t mainHandle = xTaskGetHandle("main_task");
-    vTaskDelete(mainHandle);
+    if (mainHandle != nullptr) {
+        vTaskDelete(mainHandle);
+    }
 
     // flashing led error state persists for further investigation
     // in future we could post a description to a server

@@ -5,21 +5,25 @@
 #include "WiFiStation.h"
 #include "ErrorHandler.h"
 
-constexpr int threshold = 500; // 500mA
+constexpr int threshold = 1500; // 500mA
 
 const gpio_num_t ledPin = GPIO_NUM_2;
 
 CarMeasure carMeasure;
-VictronModbusClient modbusClient("10.0.0.116", 502);
+VictronModbusClient modbusClient("10.0.3.25", 502);
 WiFiStation wifiStation("Futura", "");
 
 extern "C" void app_main() {
-
     ErrorHandler::init(ledPin);
+
+    // Short delay for wifi
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
 
     wifiStation.init(); // this (nvs) has to be done before ADC init
     carMeasure.init();
     modbusClient.init();
+
+    // todo stop here if an error is encountered
 
     ErrorHandler::ok();
 
@@ -29,9 +33,9 @@ extern "C" void app_main() {
 
             ESP_LOGI("main", "Taking measurement and posting");
 
-            int measurement = carMeasure.measureRMSAmperes();
+            uint32_t measurement = carMeasure.measureRMSAmperes();
 
-            ESP_LOGI("main", "Measurement: %d", measurement);
+            ESP_LOGI("main", "Measurement: %lu", measurement);
 
             if (measurement > threshold) {
                 modbusClient.handleCarSignal();

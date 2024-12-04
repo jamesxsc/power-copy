@@ -5,7 +5,6 @@
 #include "WiFiStation.h"
 
 #include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
 #include "freertos/event_groups.h"
 #include "esp_system.h"
 #include "esp_wifi.h"
@@ -14,7 +13,6 @@
 #include "nvs_flash.h"
 #include "ErrorHandler.h"
 
-// Once instantiated, this class is responsible for maintaining the (critical) to allow Modbus communication with Cerbo GX
 WiFiStation::WiFiStation(const std::string &ssid, const std::string &password) : ssid_(ssid), password_(password) {
 }
 
@@ -22,10 +20,13 @@ static EventGroupHandle_t wifi_event_group;
 
 void WiFiStation::eventHandler(void *arg, esp_event_base_t event_base, int32_t event_id, void *event_data) {
     if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START) {
+        ESP_LOGI("WiFiStation", "WiFi started");
         esp_wifi_connect();
     } else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED) {
-        // todo consider retry logic to prevent infinite loop, but reset on connected
+        // we allow infinite reconnect tries unless this causes issues
+        // no delay is required as this is a blocking operation which is expected to take some time
         xEventGroupSetBits(wifi_event_group, BIT1);
+        // todo add an error clear for us reconnecting
         esp_wifi_connect();
     } else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) {
         xEventGroupSetBits(wifi_event_group, BIT0);

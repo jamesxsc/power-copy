@@ -11,7 +11,7 @@ class CarMeasure {
 public:
     void init();
 
-    int measureRMSAmperes();
+    uint32_t measureRMSAmperes();
 
 private:
     int res_ = 24;

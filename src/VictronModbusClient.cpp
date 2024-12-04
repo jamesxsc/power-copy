@@ -15,11 +15,12 @@ struct task_params_t {
 };
 
 VictronModbusClient::VictronModbusClient(const std::string &host, int port) : host_(host), port_(port) {
-    mb_ = new modbus(host_, port_);
+    mb_ = nullptr;
     windowEndTaskHandle_ = nullptr;
 }
 
 void VictronModbusClient::init() {
+    mb_ = new modbus(host_, port_);
     mb_->modbus_set_slave_id(100);
     mb_->modbus_connect();
 
@@ -52,11 +53,9 @@ void VictronModbusClient::handleCarSignal() {
         windowEndMins = 0;
     }
 
-//    TaskStatus_t status;
-// todo not allowed!
-//    vTaskGetInfo(*windowEndTaskHandle, &status, pdFALSE, eInvalid);
+    eTaskState state = eTaskGetState(*windowEndTaskHandle_);
     // This means that the task has finished, so we are in the next time interval and want to start a new task for the end
-//    if (status.eCurrentState == eDeleted || status.eCurrentState == eInvalid) {
+    if (state == eDeleted || state == eInvalid) {
     int millisTillTask = 60000 * ((windowEndHour - currentHour) * 60 + windowEndMins - currentMins);
     task_params_t params = {
             .instance = this,
@@ -67,7 +66,7 @@ void VictronModbusClient::handleCarSignal() {
         vTaskDelay(params->millis);
         params->instance->modbusNormalOperation();
     }, "window_end_task", 2048, (void *) &params, 5, windowEndTaskHandle_);
-//    }
+    }
 
 }
 
