@@ -17,13 +17,15 @@ public:
 
     void handleCarSignal();
 
+    void handleNoCarSignal();
+
     ~VictronModbusClient();
 
-private:
+//private:
     std::string host_;
     int port_;
     modbus* mb_;
-    TaskHandle_t* windowEndTaskHandle_;
+    TaskHandle_t windowEndTaskHandle_;
 
     void modbusChargeToFull();
     void modbusNormalOperation();

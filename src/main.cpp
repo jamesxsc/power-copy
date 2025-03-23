@@ -5,19 +5,16 @@
 #include "WiFiStation.h"
 #include "ErrorHandler.h"
 
-constexpr int threshold = 1500; // 500mA
+constexpr int threshold = 1500; // 1500mA
 
 const gpio_num_t ledPin = GPIO_NUM_2;
 
 CarMeasure carMeasure;
 VictronModbusClient modbusClient("10.0.3.25", 502);
-WiFiStation wifiStation("Futura", "");
+WiFiStation wifiStation("Futura", "#787txHsvP#");
 
 extern "C" void app_main() {
     ErrorHandler::init(ledPin);
-
-    // Short delay for wifi
-    vTaskDelay(1000 / portTICK_PERIOD_MS);
 
     wifiStation.init(); // this (nvs) has to be done before ADC init
     carMeasure.init();
@@ -39,6 +36,8 @@ extern "C" void app_main() {
 
             if (measurement > threshold) {
                 modbusClient.handleCarSignal();
+            } else {
+                modbusClient.handleNoCarSignal();
             }
 
             // TODO what is provider's mininum window size such that we capture all half hour intervals

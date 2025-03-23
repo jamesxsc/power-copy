@@ -15,7 +15,7 @@
 
 static TaskHandle_t s_task_handle = nullptr;
 
-#define NUM_SAMPLES 2048
+#define NUM_SAMPLES 1024
 
 // first thing to try is removing this altogether
 // if not we pass instance of main task from initializer
@@ -148,7 +148,8 @@ uint32_t CarMeasure::measureRMSAmperes() {
     uint32_t mainsCurrent = coilRatio_ * milliVolts / res_;
 
     // Sanity check
-    if (mainsCurrent == 0 || mainsCurrent > 100000) {
+    if (mainsCurrent > 100000) {
+        ESP_LOGE("CarMeasure", "Mains current is too high: %lu", mainsCurrent);
         ErrorHandler::error();
         return 0;
     }

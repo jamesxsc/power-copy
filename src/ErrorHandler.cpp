@@ -38,4 +38,7 @@ void ErrorHandler::error() {
             vTaskDelay(100 / portTICK_PERIOD_MS);
         }
     }, "error_task", 2048, nullptr, 5, nullptr);
+
+    vTaskDelay(1500 / portTICK_PERIOD_MS); // give it 1500 millis to show then reboot - should allow recovery from most issues
+    esp_restart();
 }
